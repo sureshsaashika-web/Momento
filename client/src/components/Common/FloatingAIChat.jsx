@@ -23,19 +23,56 @@ export const FloatingAIChat = () => {
     setMessages(prev => [...prev, newMsg]);
     setInput('');
 
-    // Generate smart response based on user input
-    setTimeout(() => {
-      let botResponse = "Take 3 deep breaths. Based on your current 30-min window before CS101, I recommend grabbing a light snack at the canteen.";
-      if (query.includes("stressed")) {
-        botResponse = "I hear you. Turn on Care Mode in the dashboard or try our 4-7-8 breathing exercise to lower your heart rate.";
-      } else if (query.includes("prioritize")) {
-        botResponse = "Focus ONLY on your Algorithm Problem Set 4. Ignore other non-urgent tasks for the next 45 minutes.";
-      } else if (query.includes("20 minutes")) {
-        botResponse = "20 minutes is perfect to review the top 3 formulas for MATH202 or grab fresh water.";
+    // Send the user's message to the real Momento AI backend
+const getAIResponse = async () => {
+  try {
+    const response = await fetch(
+      'https://momento-backend-f3kq.onrender.com/api/recommendations/generate',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+  query: query,
+  capacity: 'MANAGE',
+  freeMinutes: 30,
+  nextClass: 'your next class',
+  lastMealHoursAgo: 4,
+  location: 'college'
+})
       }
+    );
 
-      setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'bot', text: botResponse }]);
-    }, 600);
+    const result = await response.json();
+
+    if (result.success && result.data) {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now() + 1,
+          sender: 'bot',
+          text: `${result.data.actionText}\n\n${result.data.reason}`
+        }
+      ]);
+    } else {
+      throw new Error('AI response was not successful');
+    }
+  } catch (error) {
+    console.error('AI Error:', error);
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now() + 1,
+        sender: 'bot',
+        text: "I'm having trouble connecting to my AI brain right now. Please try again."
+      }
+    ]);
+  }
+};
+
+getAIResponse();
   };
 
   return (
